@@ -36,16 +36,16 @@ jobs:
           fi
 
       - name: Checkout latest jdpro
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: 6dylan6/jdpro
           ref: main
           path: jdpro
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: jdpro/package-lock.json
 
