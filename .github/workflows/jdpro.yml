@@ -51,7 +51,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: jdpro
-        run: npm ci --ignore-scripts
+        run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Run selected scripts
         working-directory: jdpro
