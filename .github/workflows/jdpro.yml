@@ -1,0 +1,70 @@
+name: JD automation
+
+on:
+  workflow_dispatch:
+    inputs:
+      scripts:
+        description: "Space-separated script files to run"
+        required: false
+        default: "jd_CheckCK.js jd_bean_info.js jd_signbeanact_.js jd_dpqd_sign.js jd_hssign.js jd_yssign.js"
+  schedule:
+    # GitHub Actions cron uses UTC. This is 09:10 Asia/Shanghai.
+    - cron: "10 1 * * *"
+
+concurrency:
+  group: jd-automation
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      JD_COOKIE: ${{ secrets.JD_COOKIE }}
+      PUSH_KEY: ${{ secrets.PUSH_KEY }}
+      BARK_PUSH: ${{ secrets.BARK_PUSH }}
+      TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+      TG_USER_ID: ${{ secrets.TG_USER_ID }}
+      SCRIPT_LIST: ${{ github.event.inputs.scripts || vars.JD_SCRIPT_LIST || 'jd_CheckCK.js jd_bean_info.js jd_signbeanact_.js jd_dpqd_sign.js jd_hssign.js jd_yssign.js' }}
+
+    steps:
+      - name: Validate secrets
+        run: |
+          if [ -z "$JD_COOKIE" ]; then
+            echo "Missing required repository secret: JD_COOKIE"
+            exit 1
+          fi
+
+      - name: Checkout latest jdpro
+        uses: actions/checkout@v4
+        with:
+          repository: 6dylan6/jdpro
+          ref: main
+          path: jdpro
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: jdpro/package-lock.json
+
+      - name: Install dependencies
+        working-directory: jdpro
+        run: npm ci --ignore-scripts
+
+      - name: Run selected scripts
+        working-directory: jdpro
+        shell: bash
+        run: |
+          set -euo pipefail
+          for script in $SCRIPT_LIST; do
+            if [ ! -f "$script" ]; then
+              echo "::warning::Skip missing script: $script"
+              continue
+            fi
+            echo "::group::node $script"
+            node "$script" || echo "::warning::Script failed: $script"
+            echo "::endgroup::"
+            sleep 20
+          done
